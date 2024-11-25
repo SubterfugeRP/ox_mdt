@@ -254,7 +254,6 @@ local selectProfiles = [[
         DATE_FORMAT(characters.dateofbirth, "%Y-%m-%d") AS dob,
 		profile.image,
         JSON_UNQUOTE(JSON_EXTRACT(characters.data, '$.mugshot')) as mugshot
-        profile.image
     FROM
         characters
     LEFT JOIN

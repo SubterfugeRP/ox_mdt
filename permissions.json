@@ -57,15 +57,15 @@
         "police": 2
     },
     "set_call_sign": {
-        "police": 7
+        "police": 3
     },
     "set_officer_rank": {
-        "police": 4
+        "police": 3
     },
     "fire_officer": {
-        "police": 4
+        "police":3
     },
     "hire_officer": {
-        "police": 4
+        "police": 3
     }
 }
