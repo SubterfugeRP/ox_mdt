@@ -11,51 +11,54 @@ import { IconReceiptOff } from '@tabler/icons-react';
 import locales from '../../../../../locales';
 
 const useStyles = createStyles((theme) => ({
-  container: {
-    overflow: 'hidden',
-    height: '100%',
-    backgroundColor: theme.colors.durple[6],
-    borderRadius: theme.radius.md,
-    boxShadow: theme.shadows.md,
-  },
+	container: {
+		overflow: 'hidden',
+		height: '100%',
+		backgroundColor: theme.colors.durple[6],
+		borderRadius: theme.radius.md,
+		boxShadow: theme.shadows.md,
+	},
+	h100: {
+		height: "100%"
+	}
 }));
 
 const ActiveReport: React.FC = () => {
-  const isReportActive = useIsReportActive();
-  const { classes } = useStyles();
+	const isReportActive = useIsReportActive();
+	const { classes } = useStyles();
 
-  return (
-    <>
-      <>
-        <Box sx={{ overflowY: 'scroll' }}>
-          {isReportActive ? (
-            <Stack spacing="xs">
-              <BaseCard h={500}>
-                <ReportContent />
-              </BaseCard>
-              <BaseCard>
-                <OfficersInvolved />
-              </BaseCard>
-              <BaseCard>
-                <ReportEvidence />
-              </BaseCard>
-            </Stack>
-          ) : (
-            <Stack className={classes.container} justify="center">
-              <NotFound icon={IconReceiptOff} label={locales.no_report_selected} />
-            </Stack>
-          )}
-        </Box>
-        {isReportActive ? (
-          <ReportCriminals />
-        ) : (
-          <Stack className={classes.container} justify="center">
-            <NotFound icon={IconReceiptOff} label={locales.no_report_selected} />
-          </Stack>
-        )}
-      </>
-    </>
-  );
+	return (
+		<>
+			<>
+				<Box sx={{ overflowY: 'scroll' }}>
+					{isReportActive ? (
+						<Stack spacing="xs" className={classes.h100}>
+							<BaseCard grow={true}>
+								<ReportContent />
+							</BaseCard>
+							<BaseCard>
+								<OfficersInvolved />
+							</BaseCard>
+							<BaseCard>
+								<ReportEvidence />
+							</BaseCard>
+						</Stack>
+					) : (
+						<Stack className={classes.container} justify="center">
+							<NotFound icon={IconReceiptOff} label={locales.no_report_selected} />
+						</Stack>
+					)}
+				</Box>
+				{isReportActive ? (
+					<ReportCriminals />
+				) : (
+					<Stack className={classes.container} justify="center">
+						<NotFound icon={IconReceiptOff} label={locales.no_report_selected} />
+					</Stack>
+				)}
+			</>
+		</>
+	);
 };
 
 export default ActiveReport;

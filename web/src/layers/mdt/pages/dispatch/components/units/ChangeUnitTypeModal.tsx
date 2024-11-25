@@ -6,41 +6,43 @@ import { fetchNui } from '../../../../../../utils/fetchNui';
 import { modals } from '@mantine/modals';
 
 interface Props {
-  id: number;
-  initialValue: string;
+	id: number;
+	initialValue: string;
 }
 
 const ChangeUnitTypeModal: React.FC<Props> = ({ id, initialValue }) => {
-  const [value, setValue] = React.useState<string>(initialValue);
-  const [isLoading, setIsLoading] = React.useState(false);
+	const [value, setValue] = React.useState<string>(initialValue);
+	const [isLoading, setIsLoading] = React.useState(false);
 
-  const handleConfirm = async () => {
-    setIsLoading(true);
-    await fetchNui('setUnitType', { id, value }, { data: true });
-    setIsLoading(false);
-    modals.closeAll();
-  };
+	const handleConfirm = async () => {
+		setIsLoading(true);
+		await fetchNui('setUnitType', { id, value }, { data: true });
+		setIsLoading(false);
+		modals.closeAll();
+	};
 
-  return (
-    <Stack>
-      <Select
-        value={value}
-        onChange={(val: UnitType) => setValue(val)}
-        label={locales.unit_vehicle_type}
-        withinPortal
-        defaultValue="car"
-        data={[
-          { label: locales.car, value: 'car' },
-          { label: locales.boat, value: 'boat' },
-          { label: locales.heli, value: 'heli' },
-          { label: locales.motor, value: 'motor' },
-        ]}
-      />
-      <Button variant="light" onClick={handleConfirm} loading={isLoading}>
-        Confirm
-      </Button>
-    </Stack>
-  );
+	return (
+		<Stack>
+			<Select
+				value={value}
+				onChange={(val: UnitType) => setValue(val)}
+				label={locales.unit_vehicle_type}
+				withinPortal
+				defaultValue="lincoln"
+				data={[
+					{ label: locales.lincoln, value: 'lincoln' },
+					{ label: locales.adam, value: 'adam' },
+					{ label: locales.tango, value: 'tango' },
+					{ label: locales.motor, value: 'motor' },
+					{ label: locales.heli, value: 'heli' },
+					{ label: locales.boat, value: 'boat' },
+				]}
+			/>
+			<Button variant="light" onClick={handleConfirm} loading={isLoading}>
+				{locales.confirm}
+			</Button>
+		</Stack>
+	);
 };
 
 export default ChangeUnitTypeModal;

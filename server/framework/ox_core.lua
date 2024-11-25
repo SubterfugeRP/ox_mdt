@@ -5,80 +5,80 @@ local config = require 'config'
 local dbSearch = require 'server.utils.dbSearch'
 
 CreateThread(function()
-    local dbUserIndexes = MySQL.rawExecute.await('SHOW INDEX FROM `characters`') or {}
-    local dbPlateIndexes = MySQL.rawExecute.await('SHOW INDEX FROM `vehicles`') or {}
-    local insertCharIndex = true
+	local dbUserIndexes = MySQL.rawExecute.await('SHOW INDEX FROM `characters`') or {}
+	local dbPlateIndexes = MySQL.rawExecute.await('SHOW INDEX FROM `vehicles`') or {}
+	local insertCharIndex = true
 
-    for i = 1, #dbUserIndexes do
-        local index = dbUserIndexes[i]
+	for i = 1, #dbUserIndexes do
+		local index = dbUserIndexes[i]
 
-        if index.Key_name == 'stateId_name' then
-            insertCharIndex = false
-            break
-        end
-    end
+		if index.Key_name == 'stateId_name' then
+			insertCharIndex = false
+			break
+		end
+	end
 
-    if insertCharIndex then
-        MySQL.update('ALTER TABLE `characters` ADD FULLTEXT INDEX `stateId_name` (`stateId`, `firstName`, `lastName`)')
-    end
+	if insertCharIndex then
+		MySQL.update('ALTER TABLE `characters` ADD FULLTEXT INDEX `stateId_name` (`stateId`, `firstName`, `lastName`)')
+	end
 
-    for i = 1, #dbPlateIndexes do
-        local index = dbPlateIndexes[i]
+	for i = 1, #dbPlateIndexes do
+		local index = dbPlateIndexes[i]
 
-        if index.Key_name == 'vehicle_plate' then
-            return
-        end
-    end
+		if index.Key_name == 'vehicle_plate' then
+			return
+		end
+	end
 
-    MySQL.update('ALTER TABLE `vehicles` ADD FULLTEXT INDEX `vehicle_plate` (`plate`)')
+	MySQL.update('ALTER TABLE `vehicles` ADD FULLTEXT INDEX `vehicle_plate` (`plate`)')
 end)
 
 local function addOfficer(playerId)
-    local player = Ox.GetPlayer(playerId)
+	local player = Ox.GetPlayer(playerId)
 
-    if not player then return end
+	if not player then return end
 
-    local group, grade = player.getGroup(config.policeGroups)
+	local group, grade = player.getGroup(config.policeGroups)
 
-    if group and grade then
-        officers.add(playerId, player.get('firstName'), player.get('lastName'), player.stateId, group, grade)
-    end
+	if group and grade then
+		officers.add(playerId, player.get('firstName'), player.get('lastName'), player.stateId, group, grade)
+	end
 end
 
 CreateThread(function()
-    for _, playerId in pairs(GetPlayers()) do
-        addOfficer(tonumber(playerId))
-    end
+	for _, playerId in pairs(GetPlayers()) do
+		addOfficer(tonumber(playerId))
+	end
 end)
 
 AddEventHandler('ox:playerLoaded', addOfficer)
 
 AddEventHandler('ox:setGroup', function(playerId, name, grade)
-    local officer = officers.get(playerId)
+	local officer = officers.get(playerId)
 
-    if officer then
-        if officer.group == name then
-            if not grade then
-                return officers.remove(playerId)
-            end
+	if officer then
+		if officer.group == name then
+			if not grade then
+				return officers.remove(playerId)
+			end
 
-            officer.grade = grade
-        end
+			officer.grade = grade
+		end
 
-        return
-    end
+		return
+	end
 
-    addOfficer(playerId)
+	addOfficer(playerId)
 end)
 
 AddEventHandler('ox:playerLogout', function(playerId)
-    local officer = officers.get(playerId)
+	local officer = officers.get(playerId)
 
-    if officer then
-        local state = Player(playerId).state
-        units.removePlayerFromUnit(officer, state)
-        officers.remove(playerId)
-    end
+	if officer then
+		local state = Player(playerId).state
+		units.removePlayerFromUnit(officer, state)
+		officers.remove(playerId)
+	end
 end)
 
 local ox = {}
@@ -88,49 +88,49 @@ local ox = {}
 ---@param permissionName string
 ---@return boolean?
 function ox.isAuthorised(playerId, permission, permissionName)
-    if config.item and exports.ox_inventory:GetItemCount(playerId, config.item) == 0 then return false end
+	if config.item and exports.ox_inventory:GetItemCount(playerId, config.item) == 0 then return false end
 
-    local player = Ox.GetPlayer(playerId)
+	local player = Ox.GetPlayer(playerId)
 
-    if player?.getGroup('dispatch') then
-        local grade = player.getGroup('dispatch')
-        if type(permission) == 'table' then
-            if not permission.dispatch then return false end
-            return grade >= permission.dispatch
-        end
+	if player?.getGroup('dispatch') then
+		local grade = player.getGroup('dispatch')
+		if type(permission) == 'table' then
+			if not permission.dispatch then return false end
+			return grade >= permission.dispatch
+		end
 
-        return permissionName == 'mdt.access' or false
-    end
+		return permissionName == 'mdt.access' or false
+	end
 
-    if type(permission) == 'table' then
-        return player?.getGroup(permission) and true
-    end
+	if type(permission) == 'table' then
+		return player?.getGroup(permission) and true
+	end
 
-    local _, grade = player?.getGroup(config.policeGroups)
+	local _, grade = player?.getGroup(config.policeGroups)
 
-    return grade and grade >= permission
+	return grade and grade >= permission
 end
 
 ---@return { label: string, plate: string }[]
 function ox.getVehicles(parameters)
-    local vehicles = MySQL.rawExecute.await('SELECT `plate`, `model` FROM `vehicles` WHERE `owner` = ?', parameters) or
-        {}
+	local vehicles = MySQL.rawExecute.await('SELECT `plate`, `model` FROM `vehicles` WHERE `owner` = ?', parameters) or
+		{}
 
-    for _, v in pairs(vehicles) do
-        v.label = Ox.GetVehicleData(v.model)?.name or v.model
-        v.model = nil
-    end
+	for _, v in pairs(vehicles) do
+		v.label = Ox.GetVehicleData(v.model)?.name or v.model
+		v.model = nil
+	end
 
-    return vehicles
+	return vehicles
 end
 
 ---@return table<string, { label: string } | string>[]
 function ox.getLicenses(parameters)
-    local licenses = MySQL.rawExecute.await(
-        'SELECT ox_licenses.label, `issued` FROM character_licenses LEFT JOIN ox_licenses ON ox_licenses.name = character_licenses.name WHERE `charid` = ?',
-        parameters) or {}
+	local licenses = MySQL.rawExecute.await(
+		'SELECT ox_licenses.label, DATE_FORMAT(FROM_UNIXTIME(JSON_EXTRACT(character_licenses.data, "$.issued") / 1000), "%d/%m/%Y") as issued, CASE WHEN IFNULL(JSON_EXTRACT(characters.data, "$.licenseConfiscated"), "false") = "true" THEN "true" ELSE "false" END as confiscated FROM character_licenses LEFT JOIN ox_licenses ON ox_licenses.name = character_licenses.name LEFT JOIN characters ON characters.charId = character_licenses.charid WHERE character_licenses.charid = ?',
+		parameters) or {}
 
-    return licenses
+	return licenses
 end
 
 local selectCharacters = [[
@@ -143,26 +143,29 @@ local selectCharacters = [[
         characters
 ]]
 
-local selectCharactersFilter = selectCharacters .. 'WHERE MATCH (`stateId`, `firstName`, `lastName`) AGAINST (? IN BOOLEAN MODE)'
+local selectCharactersFilter = selectCharacters ..
+	'WHERE MATCH (`stateId`, `firstName`, `lastName`) AGAINST (? IN BOOLEAN MODE)'
 
 ---@param parameters string[]
 ---@param filter? boolean
 ---@return PartialProfileData[]?
 function ox.getCharacters(parameters, filter)
-    local query = filter and selectCharactersFilter or selectCharacters
-    return MySQL.rawExecute.await(query, parameters)
+	local query = filter and selectCharactersFilter or selectCharacters
+	return MySQL.rawExecute.await(query, parameters)
 end
+
 -- TODO: don't hardcode police group
 local selectOfficers = [[
     SELECT
         ox_mdt_profiles.id,
-        firstName,
-        lastName,
+        characters.firstName,
+        characters.lastName,
         characters.stateId,
         character_groups.name AS `group`,
         character_groups.grade,
         ox_mdt_profiles.image,
-        ox_mdt_profiles.callSign
+		ox_mdt_profiles.callSign,
+        JSON_UNQUOTE(JSON_EXTRACT(characters.data, '$.mugshot')) as mugshot
     FROM
         character_groups
     LEFT JOIN
@@ -174,11 +177,12 @@ local selectOfficers = [[
     ON
         characters.stateId = ox_mdt_profiles.stateId
     WHERE
-        character_groups.name IN ("police", "dispatch")
+        character_groups.name IN ("police")
 ]]
 
-local selectOfficersFilter = selectOfficers .. ' AND MATCH (characters.stateId, `firstName`, `lastName`) AGAINST (? IN BOOLEAN MODE)'
-local selectOfficersPaginate = selectOfficers .. 'LIMIT 9 OFFSET ?'
+local selectOfficersFilter = selectOfficers ..
+	' AND MATCH (characters.stateId, characters.firstName, characters.lastName) AGAINST (? IN BOOLEAN MODE) ORDER BY character_groups.grade DESC'
+local selectOfficersPaginate = selectOfficers .. ' ORDER BY character_groups.grade DESC LIMIT 9 OFFSET ?'
 local selectOfficersFilterPaginate = selectOfficersFilter .. ' LIMIT 9 OFFSET ?'
 local selectOfficersCount = selectOfficers:gsub('SELECT.-FROM', 'SELECT COUNT(*) FROM')
 
@@ -186,28 +190,29 @@ local selectOfficersCount = selectOfficers:gsub('SELECT.-FROM', 'SELECT COUNT(*)
 ---@param filter? boolean
 ---@return Officer[]?
 function ox.getOfficers(parameters, filter)
-    local query = filter and selectOfficersFilter or selectOfficers
-    return MySQL.rawExecute.await(query, parameters)
+	local query = filter and selectOfficersFilter or selectOfficers
+	return MySQL.rawExecute.await(query, parameters)
 end
 
 ---@param source number
 ---@param data {page: number, search: string}
 registerCallback('ox_mdt:fetchRoster', function(source, data)
-    if data.search == '' then
-        return {
-            totalRecords = MySQL.prepare.await(selectOfficersCount),
-            officers = MySQL.rawExecute.await(selectOfficersPaginate, { data.page - 1 })
-        }
-    end
+	if data.search == '' then
+		return {
+			totalRecords = MySQL.prepare.await(selectOfficersCount),
+			officers = MySQL.rawExecute.await(selectOfficersPaginate, { (data.page - 1) * 9 })
+		}
+	end
 
-    return dbSearch(function(parameters, filter)
-        local response = MySQL.rawExecute.await(filter and selectOfficersFilterPaginate or selectOfficersPaginate, parameters)
+	return dbSearch(function(parameters, filter)
+		local response = MySQL.rawExecute.await(filter and selectOfficersFilterPaginate or selectOfficersPaginate,
+			parameters)
 
-        return {
-            totalRecords = #response,
-            officers = response,
-        }
-    end, data.search, data.page - 1)
+		return {
+			totalRecords = #response,
+			officers = response,
+		}
+	end, data.search, (data.page - 1) * 9)
 end)
 
 local selectWarrants = [[
@@ -216,22 +221,29 @@ local selectWarrants = [[
         characters.stateId,
         characters.firstName,
         characters.lastName,
-        DATE_FORMAT(warrants.expiresAt, "%Y-%m-%d %T") AS expiresAt
+        profiles.image,
+        DATE_FORMAT(warrants.expiresAt, "%Y-%m-%d %T") AS expiresAt,
+        JSON_UNQUOTE(JSON_EXTRACT(characters.data, '$.mugshot')) as mugshot
     FROM
         `ox_mdt_warrants` warrants
     LEFT JOIN
         `characters`
     ON
         warrants.stateid = characters.stateid
+	LEFT JOIN
+        `ox_mdt_profiles` profiles
+    ON
+        warrants.stateid = profiles.stateid
 ]]
 
-local selectWarrantsFilter = selectWarrants .. ' WHERE MATCH (characters.stateId, `firstName`, `lastName`) AGAINST (? IN BOOLEAN MODE)'
+local selectWarrantsFilter = selectWarrants ..
+	' WHERE MATCH (characters.stateId, `firstName`, `lastName`) AGAINST (? IN BOOLEAN MODE)'
 
 ---@param parameters table
 ---@param filter? boolean
 function ox.getWarrants(parameters, filter)
-    local query = filter and selectWarrantsFilter or selectWarrants
-    return MySQL.rawExecute.await(query, parameters)
+	local query = filter and selectWarrantsFilter or selectWarrants
+	return MySQL.rawExecute.await(query, parameters)
 end
 
 local selectProfiles = [[
@@ -240,6 +252,8 @@ local selectProfiles = [[
         characters.firstName,
         characters.lastName,
         DATE_FORMAT(characters.dateofbirth, "%Y-%m-%d") AS dob,
+		profile.image,
+        JSON_UNQUOTE(JSON_EXTRACT(characters.data, '$.mugshot')) as mugshot
         profile.image
     FROM
         characters
@@ -271,16 +285,16 @@ local selectProfilesFilter = selectProfiles:gsub('LIMIT', [[
 ---@param parameters table
 ---@param filter? boolean
 function ox.getProfiles(parameters, filter)
-    local query = filter and selectProfilesFilter or selectProfiles
-    local params = filter and { parameters[1], parameters[1], parameters[2] } or parameters
+	local query = filter and selectProfilesFilter or selectProfiles
+	local params = filter and { parameters[1], parameters[1], parameters[2] } or parameters
 
-    return MySQL.rawExecute.await(query, params)
+	return MySQL.rawExecute.await(query, params)
 end
 
 ---@param parameters { [1]: number }
 ---@return FetchOfficers?
 function ox.getOfficersInvolved(parameters)
-    return MySQL.rawExecute.await([[
+	return MySQL.rawExecute.await([[
         SELECT
             characters.firstName,
             characters.lastName,
@@ -294,7 +308,7 @@ function ox.getOfficersInvolved(parameters)
             characters.stateId = officer.stateId
         LEFT JOIN
             ox_mdt_profiles profile
-        ON 
+        ON
             characters.stateId = profile.stateId
         WHERE
             reportid = ?
@@ -304,7 +318,7 @@ end
 ---@param parameters { [1]: number }
 ---@return FetchCriminals?
 function ox.getCriminalsInvolved(parameters)
-    return MySQL.rawExecute.await([[
+	return MySQL.rawExecute.await([[
         SELECT DISTINCT
             criminal.stateId,
             characters.firstName,
@@ -327,7 +341,7 @@ end
 ---@param parameters { [1]: number }
 ---@return FetchCharges?
 function ox.getCriminalCharges(parameters)
-    return MySQL.rawExecute.await([[
+	return MySQL.rawExecute.await([[
         SELECT
             stateId,
             charge as label,
@@ -346,17 +360,19 @@ end
 ---@param parameters { [1]: string }
 ---@return Profile?
 function ox.getCharacterProfile(parameters)
-    ---@type Profile
-    local profile = MySQL.rawExecute.await([[
+	---@type Profile
+	local profile = MySQL.rawExecute.await([[
         SELECT
             a.firstName,
             a.lastName,
             a.stateId,
             a.charid,
+			a.deleted,
             DATE_FORMAT(a.dateofbirth, "%Y-%m-%d") AS dob,
             a.phoneNumber,
             b.image,
-            b.notes
+            b.notes,
+            JSON_UNQUOTE(JSON_EXTRACT(a.data, '$.mugshot')) as mugshot
         FROM
             `characters` a
         LEFT JOIN
@@ -367,13 +383,13 @@ function ox.getCharacterProfile(parameters)
             a.stateId = ?
     ]], parameters)?[1]
 
-    return profile
+	return profile
 end
 
 ---@param parameters { [1]: number }
 ---@return Announcement[]?
 function ox.getAnnouncements(parameters)
-    return MySQL.rawExecute.await([[
+	return MySQL.rawExecute.await([[
         SELECT
             a.id,
             a.contents,
@@ -382,7 +398,8 @@ function ox.getAnnouncements(parameters)
             b.lastName,
             c.image,
             c.callSign,
-            DATE_FORMAT(a.createdAt, "%Y-%m-%d %T") AS createdAt
+            DATE_FORMAT(a.createdAt, "%Y-%m-%d %T") AS createdAt,
+            JSON_UNQUOTE(JSON_EXTRACT(b.data, '$.mugshot')) as mugshot
         FROM
             `ox_mdt_announcements` a
         LEFT JOIN
@@ -398,7 +415,7 @@ function ox.getAnnouncements(parameters)
 end
 
 function ox.getBOLOs(parameters)
-    return MySQL.rawExecute.await([[
+	return MySQL.rawExecute.await([[
         SELECT
             a.id,
             a.creator AS stateId,
@@ -407,6 +424,7 @@ function ox.getBOLOs(parameters)
             b.image,
             c.firstName,
             c.lastName,
+			JSON_UNQUOTE(JSON_EXTRACT(c.data, '$.mugshot')) as mugshot,
             JSON_ARRAYAGG(d.image) AS images,
             DATE_FORMAT(a.createdAt, "%Y-%m-%d %T") AS createdAt
         FROM
@@ -418,7 +436,7 @@ function ox.getBOLOs(parameters)
         LEFT JOIN
             `characters` c
         ON
-            c.stateId = b.stateId
+           c.stateId = a.creator
         LEFT JOIN
             `ox_mdt_bolos_images` d
         ON
@@ -430,81 +448,97 @@ end
 ---@param source number
 ---@param data {stateId: string, group: string, grade: number}
 registerCallback('ox_mdt:setOfficerRank', function(source, data)
-    local player = Ox.GetPlayerFromFilter({stateId = data.stateId})
+	local player = Ox.GetPlayerFromFilter({ stateId = data.stateId })
 
-    if player then
-        for i = 1, #config.policeGroups do
-            local group = config.policeGroups[i]
-            -- if player has selected police group update it, otherwise remove all the other police groups
-            if player.getGroup(group) and group == data.group then
-                player.setGroup(data.group, data.grade + 1)
-            else
-                player.setGroup(group, -1)
-            end
-        end
+	if player then
+		for i = 1, #config.policeGroups do
+			local group = config.policeGroups[i]
+			-- if player has selected police group update it, otherwise remove all the other police groups
+			if player.getGroup(group) and group == data.group then
+				player.setGroup(data.group, data.grade + 1)
+			else
+				player.setGroup(group, -1)
+			end
+		end
 
-        return true
-    end
+		return true
+	end
 
-    -- Todo: Somehow avoid running 3 queries?
+	-- Todo: Somehow avoid running 3 queries?
 
-    local charId = MySQL.prepare.await('SELECT `charid` FROM `characters` WHERE `stateId` = ?', { data.stateId })
+	local charId = MySQL.prepare.await('SELECT `charid` FROM `characters` WHERE `stateId` = ?', { data.stateId })
 
-    local groups = config.policeGroups
+	local groups = config.policeGroups
 
-    -- Remove all police groups from the character except the one being set
-    for i = 1, #groups do
-        local group = groups[i]
-        if group == data.group then
-            groups[i] = nil
-        end
-    end
+	-- Remove all police groups from the character except the one being set
+	for i = 1, #groups do
+		local group = groups[i]
+		if group == data.group then
+			groups[i] = nil
+		end
+	end
 
-    MySQL.prepare.await('DELETE FROM `character_groups` WHERE `charId` = ? AND `name` IN (?)', { groups })
+	MySQL.prepare.await('DELETE FROM `character_groups` WHERE `charId` = ? AND `name` IN (?)', { groups })
 
-    MySQL.prepare.await('UPDATE `character_groups` SET `grade` = ? WHERE `charId` = ? AND `name` = ? ', { data.grade + 1, charId, data.group })
+	MySQL.prepare.await('UPDATE `character_groups` SET `grade` = ? WHERE `charId` = ? AND `name` = ? ',
+		{ data.grade + 1, charId, data.group })
 
-    return true
+	return true
 end, 'set_officer_rank')
 
 ---@param source number
 ---@param stateId number
 registerCallback('ox_mdt:fireOfficer', function(source, stateId)
-    local player = Ox.GetPlayerFromFilter({stateId = stateId})
+	local player = Ox.GetPlayerFromFilter({ stateId = stateId })
 
-    if player then
-        for i = 1, #config.policeGroups do
-            local group = config.policeGroups[i]
-            player.setGroup(group, -1)
-        end
+	if player then
+		for i = 1, #config.policeGroups do
+			local group = config.policeGroups[i]
+			player.setGroup(group, -1)
+		end
 
-        return true
-    end
+		return true
+	end
 
-    local charId = MySQL.prepare.await('SELECT `charid` FROM `characters` WHERE `stateId` = ?', { stateId })
+	local charId = MySQL.prepare.await('SELECT `charid` FROM `characters` WHERE `stateId` = ?', { stateId })
 
-    MySQL.prepare.await('DELETE FROM `character_groups` WHERE `charId` = ? AND `name` IN (?) ', { charId, config.policeGroups })
+	MySQL.prepare.await('DELETE FROM `character_groups` WHERE `charId` = ? AND `name` IN (?) ',
+		{ charId, config.policeGroups })
 
-    return true
+	return true
 end, 'fire_officer')
 
 ---@param source number
 ---@param stateId string
 registerCallback('ox_mdt:hireOfficer', function(source, stateId)
-    local player = Ox.GetPlayerFromFilter({stateId = stateId})
+	local player = Ox.GetPlayerFromFilter({ stateId = stateId })
 
-    if player then
-        if player.getGroup(config.policeGroups) then return false end
+	if player then
+		if player.getGroup(config.policeGroups) then return false end
 
-        player.setGroup('police', 1)
-        return true
-    end
+		player.setGroup('police', 1)
+		return true
+	end
 
-    local charId = MySQL.prepare.await('SELECT `charid` FROM `characters` WHERE `stateId` = ?', { stateId })
+	local charId = MySQL.prepare.await('SELECT `charid` FROM `characters` WHERE `stateId` = ?', { stateId })
 
-    local success = pcall(MySQL.prepare.await, 'INSERT INTO `character_groups` (`charId`, `name`, `grade`) VALUES (?, ?, ?)', { charId, 'police', 1 })
+	local success = pcall(MySQL.prepare.await,
+		'INSERT INTO `character_groups` (`charId`, `name`, `grade`) VALUES (?, ?, ?)', { charId, 'police', 1 })
 
-    return success
+	return success
 end, 'hire_officer')
+
+registerCallback("ox_mdt:getProfileImage", function(source)
+	local player = Ox.GetPlayer(source)
+	if not player or not player.charId then return end
+	local row = MySQL.single.await([[
+        SELECT JSON_UNQUOTE(JSON_EXTRACT(c.`data`, '$.mugshot')) as mugshot, p.`image` as image
+        FROM `characters` c
+        LEFT JOIN `ox_mdt_profiles` p ON c.`stateId` = p.`stateId`
+        WHERE c.`stateId` = ?
+    ]], { player.stateId })
+	if not row then return end
+	return row
+end)
 
 return ox

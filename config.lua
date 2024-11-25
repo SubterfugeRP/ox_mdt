@@ -1,7 +1,7 @@
 return {
-    framework = 'ox_core',
-    policeGroups = { 'police', 'dispatch' },
-    item = false -- or the item name
+	framework = 'ox_core',
+	policeGroups = { 'police' },
+	item = false -- or the item name
 }
 --[[
 ["mdt"] = {
